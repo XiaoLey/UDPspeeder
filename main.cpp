@@ -47,8 +47,8 @@ static void print_help() {
     printf("    -f,--fec              x1:y1,x2:y2,..  similiar to -f/--fec above,fine-grained fec parameters,may help save bandwidth.\n");
     printf("                                          example: \"-f 1:3,2:4,10:6,20:10\". check repo for details\n");
     printf("    --random-drop         <number>        simulate packet loss, unit: 0.01%%. default value: 0.\n");
-    printf("    --disable-obscure     <number>        disable obscure, to save a bit bandwidth and cpu\n");
-    printf("    --disable-checksum    <number>        disable checksum to save a bit bandwdith and cpu\n");
+    printf("    --disable-obscure                     disable obscure, to save a bit bandwidth and cpu\n");
+    printf("    --disable-checksum                    disable checksum to save a bit bandwidth and cpu\n");
     // printf("    --disable-xor         <number>        disable xor\n");
 
     printf("developer options:\n");
@@ -60,9 +60,9 @@ static void print_help() {
     printf("    -q,--queue-len        <number>        fec queue len, only for mode 0, fec will be performed immediately after queue is full.\n");
     printf("                                          default value: 200. \n");
     printf("    --decode-buf          <number>        size of buffer of fec decoder,unit: packet, default: 2000\n");
-    //    printf("    --fix-latency         <number>        try to stabilize latency, only for mode 0\n");
+    printf("    --fix-latency                         try to stabilize latency, only for mode 0\n");
     printf("    --delay-capacity      <number>        max number of delayed packets, 0 means unlimited, default: 0\n");
-    printf("    --disable-fec         <number>        completely disable fec, turn the program into a normal udp tunnel\n");
+    printf("    --disable-fec                         completely disable fec, turn the program into a normal udp tunnel\n");
     printf("    --sock-buf            <number>        buf size for socket, >=10 and <=10240, unit: kbyte, default: 1024\n");
     printf("    --out-addr            ip:port         force all output packets of '-r' end to go through this address, port 0 for random port.\n");
 #ifdef __linux__
