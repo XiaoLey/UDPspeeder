@@ -128,6 +128,8 @@ main options:
     -f,--fec              x:y             forward error correction, send y redundant packets for every x packets
     --timeout             <number>        how long could a packet be held in queue before doing fec, unit: ms, default: 8ms
     --report              <number>        turn on send/recv report, and set a period for reporting, unit: s
+    --stats-interval      <number>        write a stats snapshot file every <number> s, 0 to disable, default: 0
+    --stats-file          <string>        stats snapshot file path, default: /run/speederv2-<local_port>.stats
 advanced options:
     --mode                <number>        fec-mode,available values: 0,1; mode 0(default) costs less bandwidth,no mtu problem.
                                           mode 1 usually introduces less latency, but you have to care about mtu.
@@ -186,6 +188,25 @@ If you are new to this, don't obsess over the exact meaning of these parameters 
 
 ##### `--report` option
 Send/recv report. With it enabled you can use the data to estimate characteristics like packet rate and packet loss rate. `--report 10` means generating a report every 10 seconds.
+
+##### `--stats-interval` and `--stats-file` options
+Write the FEC decode counters to a snapshot file for an external controller to read. `--stats-interval 5` rewrites the file every 5 seconds; `0` (the default) disables it. `--stats-file` sets the path, defaulting to `/run/speederv2-<local_port>.stats`.
+
+The file is rewritten atomically (write to a temp file, then rename), so a reader never sees a half-written file. It contains only `key=value` lines:
+
+```
+ts=1721836800
+fec='1:1,10:2,20:4,40:8,80:16,100:20'
+interval='5:10'
+up_expected=12345	up_recovered=40	up_lost=5
+```
+
+`expected` = data packets that should have arrived, `recovered` = lost but recovered by FEC, `lost` = lost and unrecoverable. Identity: `expected = received + recovered + lost`. The counters are cumulative (monotonically increasing); the controller diffs two readings taken N seconds apart to get the loss/recovery over that interval.
+
+Two things to note:
+
+- Direction is split across files: each process decodes only one direction — the client's file has only `dn_*` (server→client), the server's file has only `up_*` (client→server). To see both directions, read the file on each side (keyed by its local port).
+- `lost` lags: a lost group is only counted when its slot in the decoder's ring buffer (`--decode-buf`, default 2000 packets) is recycled by later traffic. Under steady traffic it converges quickly; right after traffic stops, the last few incomplete groups are counted only when new packets arrive.
 
 ##### `-i` option
 Specifies a time window of n milliseconds. The packets of one FEC group are spread evenly across those n milliseconds when being sent, which defends against burst packet loss. The default value is 0 (i.e. the feature is off). This feature is quite useful — if the recommended parameters don't work well, try turning it on, e.g. `-i 10` or `-i 20`. This option works on roughly the same principle as what is usually called `interleaved FEC` in communication theory.

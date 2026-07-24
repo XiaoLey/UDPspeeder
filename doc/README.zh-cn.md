@@ -119,6 +119,8 @@ main options:
     -f,--fec              x:y             forward error correction, send y redundant packets for every x packets
     --timeout             <number>        how long could a packet be held in queue before doing fec, unit: ms, default: 8ms
     --report              <number>        turn on send/recv report, and set a period for reporting, unit: s
+    --stats-interval      <number>        write a stats snapshot file every <number> s, 0 to disable, default: 0
+    --stats-file          <string>        stats snapshot file path, default: /run/speederv2-<local_port>.stats
 advanced options:
     --mode                <number>        fec-mode,available values: 0,1; mode 0(default) costs less bandwidth,no mtu problem.
                                           mode 1 usually introduces less latency, but you have to care about mtu.
@@ -172,6 +174,25 @@ log and help options:
 
 ##### `--report`  选项
 数据发送和接受报告。开启后可以根据此数据推测出包速和丢包率等特征。`--report 10`表示每10秒生成一次报告。
+
+##### `--stats-interval` 和 `--stats-file` 选项
+把 FEC 解码侧的累计计数写到一个快照文件，供外部控制器读取。`--stats-interval 5` 表示每 5 秒覆盖写一次；`0`(默认)关闭。`--stats-file` 指定文件路径，缺省为 `/run/speederv2-<本地端口>.stats`。
+
+文件是原子写入的(先写临时文件再 rename)，读方不会读到写一半的内容。文件只有 `key=value` 行：
+
+```
+ts=1721836800
+fec='1:1,10:2,20:4,40:8,80:16,100:20'
+interval='5:10'
+up_expected=12345	up_recovered=40	up_lost=5
+```
+
+`expected`=应到的数据包，`recovered`=丢了但被 FEC 救回，`lost`=丢了且救不回。恒等式：`expected = 实收 + recovered + lost`。计数器是累计值(只增不减)，控制器读取两次相隔 N 秒的快照做差，即可得到这段时间的丢包/恢复量。
+
+两点注意：
+
+- 方向分开在两个文件里：一个进程只解码一个方向——client 的文件只有 `dn_*`(server→client)，server 的文件只有 `up_*`(client→server)。要同时看两个方向，需分别读两端各自端口对应的文件。
+- `lost` 有滞后：丢包的组要等解码器环形缓冲(`--decode-buf`，默认 2000 包)的槽位被后续流量回收时才计入。流量持续时收敛很快；流量骤停后，最后几个未完成组要等到下一次来包才计入。
 
 ##### `-i` 选项
 指定一个时间窗口，长度为n毫秒。同一个fec分组的数据在发送时候会被均匀分散到这n毫秒中，可以对抗突发性的丢包，默认值是0(也就是不开启此功能)。 这个功能很有用，在推荐的参数效果不理想时可以尝试打开，比如用`-i 10`、`-i 20`。这个选项的跟通信原理上常说的`交错fec` `交织fec`的原理是差不多的。
