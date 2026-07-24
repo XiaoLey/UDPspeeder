@@ -1,0 +1,8 @@
+# 编译产物
+speederv2
+speederv2_*
+speederv2.exe
+speederv2_wepoll.exe
+speederv2_mac
+*.tar.gz
+git_version.h

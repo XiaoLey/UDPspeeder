@@ -70,6 +70,11 @@ debug2: git_version
 	rm -f ${NAME}
 	${cc_local}   -o ${NAME}          -I. ${SOURCES} ${FLAGS} -lrt -Wformat-nonliteral -ggdb
 
+release_local: git_version
+	rm -f ${NAME}
+	${cc_local}   -o ${NAME}          -I. ${SOURCES} ${FLAGS} -lrt -static -O2
+	strip ${NAME}
+
 #targets only for 'make release'
 
 mips24kc_be: git_version
