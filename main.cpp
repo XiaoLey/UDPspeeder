@@ -8,6 +8,7 @@
 #include "delay_manager.h"
 #include "fec_manager.h"
 #include "misc.h"
+#include "fec_stats.h"
 #include "tunnel.h"
 //#include "tun_dev.h"
 #include "git_version.h"
@@ -33,6 +34,8 @@ static void print_help() {
     printf("    -f,--fec              x:y             forward error correction, send y redundant packets for every x packets\n");
     printf("    --timeout             <number>        how long could a packet be held in queue before doing fec, unit: ms, default: 8ms\n");
     printf("    --report              <number>        turn on send/recv report, and set a period for reporting, unit: s\n");
+    printf("    --stats-interval      <number>        write a stats snapshot file every <number> s, 0 to disable, default: 0\n");
+    printf("    --stats-file          <string>        stats snapshot file path, default: /run/speederv2-<local_port>.stats\n");
 
     printf("advanced options:\n");
     printf("    --mode                <number>        fec-mode,available values: 0,1; mode 0(default) costs less bandwidth,no mtu problem.\n");
@@ -137,6 +140,8 @@ int main(int argc, char *argv[]) {
     process_arg(argc, argv);
 
     delay_manager.set_capacity(delay_capacity);
+
+    stats_snapshot_init(loop);
 
     if (strlen(tun_dev) == 0) {
         sprintf(tun_dev, "tun%u", get_fake_random_number() % 1000);

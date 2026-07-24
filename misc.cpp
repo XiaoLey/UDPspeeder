@@ -6,6 +6,7 @@
  */
 
 #include "misc.h"
+#include "fec_stats.h"
 
 char fifo_file[1000] = "";
 
@@ -595,6 +596,8 @@ void process_arg(int argc, char *argv[]) {
             {"sock-buf", required_argument, 0, 1},
             {"random-drop", required_argument, 0, 1},
             {"report", required_argument, 0, 1},
+            {"stats-interval", required_argument, 0, 1},
+            {"stats-file", required_argument, 0, 1},
             {"delay-capacity", required_argument, 0, 1},
             {"mtu", required_argument, 0, 1},
             {"mode", required_argument, 0, 1},
@@ -793,6 +796,18 @@ void process_arg(int argc, char *argv[]) {
 
                     if (report_interval <= 0) {
                         mylog(log_fatal, "report_interval must be >0 \n");
+                        myexit(-1);
+                    }
+                } else if (strcmp(long_options[option_index].name, "stats-interval") == 0) {
+                    sscanf(optarg, "%d", &stats_interval);
+                    if (stats_interval < 0) {
+                        mylog(log_fatal, "stats_interval must be >=0 \n");
+                        myexit(-1);
+                    }
+                } else if (strcmp(long_options[option_index].name, "stats-file") == 0) {
+                    sscanf(optarg, "%s", stats_file);
+                    if (strlen(stats_file) == 0) {
+                        mylog(log_fatal, "stats_file string len=0??\n");
                         myexit(-1);
                     }
                 } else if (strcmp(long_options[option_index].name, "sock-buf") == 0) {

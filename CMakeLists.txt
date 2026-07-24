@@ -19,6 +19,7 @@ set(SOURCE_FILES
         fd_manager.cpp
         connection.cpp
         fec_manager.cpp
+        fec_stats.cpp
         misc.cpp
         tunnel_client.cpp
         tunnel_server.cpp

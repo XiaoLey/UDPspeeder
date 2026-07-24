@@ -16,6 +16,8 @@
 
 extern char fifo_file[1000];
 
+extern char rs_par_str[rs_str_len];
+
 extern int mtu_warn;
 
 extern int disable_mtu_warn;

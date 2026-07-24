@@ -10,6 +10,7 @@
 #include "common.h"
 #include "lib/rs.h"
 #include "fd_manager.h"
+#include "fec_stats.h"
 
 // int g_fec_data_num=20;
 // int g_fec_redundant_num=10;
@@ -567,6 +568,13 @@ int fec_decode_manager_t::input(char *s, int len) {
                 else
                     mylog(log_trace, "[dec][failed]seq=%08x x=%d y=%d cnt=%d\n", tmp_seq, x, y, cnt);
             }
+            // 组被挤出且从未解码成功，缺失的数据包记为 lost
+            if (tmp_it->second.fec_done == 0 && x >= 1) {
+                int x_got = 0;
+                for (auto &kv : tmp_it->second.group_mp)
+                    if (kv.first < x) x_got++;
+                fec_stat_on_lost(x, x_got);
+            }
             mp.erase(tmp_it);
         }
         if (tmp_seq == seq) {
@@ -632,6 +640,7 @@ int fec_decode_manager_t::input(char *s, int len) {
             assert(rs_decode2(group_data_num, group_data_num + group_redundant_num, fec_tmp_arr, len) == 0);  // the input data has been modified in-place
             // this line should always succeed
             mp[seq].fec_done = 1;
+            fec_stat_on_recovered(group_data_num, x_got);
 
             if (debug_fec_dec)
                 mylog(log_debug, "[dec]seq=%08x x=%d y=%d len=%d cnt=%d X=%d Y=%d\n", seq, group_data_num, group_redundant_num, len, int(inner_mp.size()), x_got, y_got);
@@ -735,6 +744,7 @@ int fec_decode_manager_t::input(char *s, int len) {
                 mylog(log_trace, "[dec]seq=%08x x=%d y=%d len=%d sum_ori=%d sum=%d X=%d Y=%d\n", seq, group_data_num, group_redundant_num, max_len, sum_ori, sum, x_got, y_got);
 
             if (fec_result_ok) {
+                fec_stat_on_recovered(group_data_num, x_got);
                 output_n = group_data_num;
 
                 if (decode_fast_send) {
@@ -751,6 +761,7 @@ int fec_decode_manager_t::input(char *s, int len) {
                 ready_for_output = 1;
             } else {
                 // fec_not_ok:
+                fec_stat_on_lost(group_data_num, x_got);
                 ready_for_output = 0;
             }
             anti_replay.set_invaild(seq);
