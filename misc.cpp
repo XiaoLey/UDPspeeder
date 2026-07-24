@@ -657,7 +657,7 @@ void process_arg(int argc, char *argv[]) {
     log_bare(log_info, "\n");
 
     int no_l = 1, no_r = 1;
-    while ((opt = getopt_long(argc, argv, "l:r:hcsk:j:f:p:n:i:q:", long_options, &option_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "l:r:hcsk:j:f:i:q:", long_options, &option_index)) != -1) {
         // string opt_key;
         // opt_key+=opt;
         switch (opt) {
