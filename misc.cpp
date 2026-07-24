@@ -292,6 +292,43 @@ int handle_command(char *s) {
             return -1;
         }
         g_fec_par.timeout = a * 1000;
+    } else if (strncmp(s, "interval", strlen("interval")) == 0) {
+        mylog(log_info, "got command [interval]\n");
+        if (strchr(s, ':') == 0) {
+            sscanf(s, "interval %d", &a);
+            if (a < 0 || a > 10000) {
+                mylog(log_warn, "invaild value\n");
+                return -1;
+            }
+            output_interval_min = output_interval_max = a * 1000;
+        } else {
+            sscanf(s, "interval %d:%d", &a, &b);
+            if (a < 0 || b < 0 || a > b || b > 10000) {
+                mylog(log_warn, "invaild value\n");
+                return -1;
+            }
+            output_interval_min = a * 1000;
+            output_interval_max = b * 1000;
+        }
+    } else if (strncmp(s, "jitter", strlen("jitter")) == 0) {
+        mylog(log_info, "got command [jitter]\n");
+        if (strchr(s, ':') == 0) {
+            sscanf(s, "jitter %d", &a);
+            if (a < 0 || a > 10000) {
+                mylog(log_warn, "invaild value\n");
+                return -1;
+            }
+            jitter_min = 0;
+            jitter_max = a * 1000;
+        } else {
+            sscanf(s, "jitter %d:%d", &a, &b);
+            if (a < 0 || b < 0 || a > b || b > 10000) {
+                mylog(log_warn, "invaild value\n");
+                return -1;
+            }
+            jitter_min = a * 1000;
+            jitter_max = b * 1000;
+        }
     } else {
         mylog(log_info, "unknown command\n");
     }
