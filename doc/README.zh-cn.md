@@ -7,7 +7,7 @@
 
 最新的版本是v2版，在v1版的基础上增加了FEC功能，更省流量。如果你用的是v1版（路由器固件里自带的集成版很可能是v1版的），请看[v1版主页](/doc/README.zh-cn.v1.md)
 
-配合vpn加速全流量的原理图(已测试支持VPN的有OpenVPN、L2TP、$\*\*\*VPN):
+配合vpn加速全流量的原理图(已测试支持VPN的有OpenVPN、L2TP、ShadowVPN):
 
 ![image0](/images/Capture2.PNG)
 
@@ -101,14 +101,14 @@ udp2raw的repo:
 
 https://github.com/wangyu-/udp2raw-tunnel
 
+# 配合OpenVPN加速全流量
+
+参见 [UDPspeeder + openvpn 配置指南](https://github.com/wangyu-/UDPspeeder/wiki/UDPspeeder-openvpn-config-guide)
+
 # 进阶操作说明
 
 ### 命令选项
 ```
-UDPspeeder V2
-git version: 3e248b414c    build date: Aug  5 2018 21:59:52
-repository: https://github.com/wangyu-/UDPspeeder
-
 usage:
     run as client: ./this_program -c -l local_listen_ip:local_port -r server_ip:server_port  [options]
     run as server: ./this_program -s -l server_listen_ip:server_port -r remote_ip:remote_port  [options]
@@ -125,27 +125,30 @@ advanced options:
     --mtu                 <number>        mtu. for mode 0, the program will split packet to segment smaller than mtu value.
                                           for mode 1, no packet will be split, the program just check if the mtu is exceed.
                                           default value: 1250. you typically shouldnt change this value.
-    -q,--queue-len        <number>        fec queue len, only for mode 0, fec will be performed immediately after queue is full.
-                                          default value: 200. 
     -j,--jitter           <number>        simulated jitter. randomly delay first packet for 0~<number> ms, default value: 0.
                                           do not use if you dont know what it means.
-    -i,--interval         <number>        scatter each fec group to a interval of <number> ms, to protect burst packet loss.
+    -i,--interval         <number>        scatter each fec group to a interval of <number> ms, to defend burst packet loss.
                                           default value: 0. do not use if you dont know what it means.
     -f,--fec              x1:y1,x2:y2,..  similiar to -f/--fec above,fine-grained fec parameters,may help save bandwidth.
                                           example: "-f 1:3,2:4,10:6,20:10". check repo for details
     --random-drop         <number>        simulate packet loss, unit: 0.01%. default value: 0.
-    --disable-obscure     <number>        disable obscure, to save a bit bandwidth and cpu.
+    --disable-obscure                     disable obscure, to save a bit bandwidth and cpu
+    --disable-checksum                    disable checksum to save a bit bandwidth and cpu
 developer options:
     --fifo                <string>        use a fifo(named pipe) for sending commands to the running program, so that you
                                           can change fec encode parameters dynamically, check readme.md in repository for
                                           supported commands.
     -j ,--jitter          jmin:jmax       similiar to -j above, but create jitter randomly between jmin and jmax
     -i,--interval         imin:imax       similiar to -i above, but scatter randomly between imin and imax
-    --decode-buf          <number>        size of buffer of fec decoder,u nit: packet, default: 2000
-    --fix-latency         <number>        try to stabilize latency, only for mode 0
-    --delay-capacity      <number>        max number of delayed packets
-    --disable-fec         <number>        completely disable fec, turn the program into a normal udp tunnel
+    -q,--queue-len        <number>        fec queue len, only for mode 0, fec will be performed immediately after queue is full.
+                                          default value: 200. 
+    --decode-buf          <number>        size of buffer of fec decoder,unit: packet, default: 2000
+    --fix-latency                         try to stabilize latency, only for mode 0
+    --delay-capacity      <number>        max number of delayed packets, 0 means unlimited, default: 0
+    --disable-fec                         completely disable fec, turn the program into a normal udp tunnel
     --sock-buf            <number>        buf size for socket, >=10 and <=10240, unit: kbyte, default: 1024
+    --out-addr            ip:port         force all output packets of '-r' end to go through this address, port 0 for random port.
+    --out-interface       <string>        force all output packets of '-r' end to go through this interface.
 log and help options:
     --log-level           <number>        0: never    1: fatal   2: error   3: warn 
                                           4: info (default)      5: debug   6: trace
@@ -174,7 +177,7 @@ log and help options:
 指定一个时间窗口，长度为n毫秒。同一个fec分组的数据在发送时候会被均匀分散到这n毫秒中，可以对抗突发性的丢包，默认值是0(也就是不开启此功能)。 这个功能很有用，在推荐的参数效果不理想时可以尝试打开，比如用`-i 10`、`-i 20`。这个选项的跟通信原理上常说的`交错fec` `交织fec`的原理是差不多的。
 
 ##### `-j` 选项
-为原始数据的发送，增加一个延迟抖动值。这样上层应用计算出来的RTT方差会更大，以等待后续冗余包的到达，不至于发生在冗余包到达之前就触发重传的尴尬。配合-t选项使用。正常情况下跨国网络本身的延迟抖动就很大，可以不用设-j。这个功能也需要时钟，默认关掉了，不过一般情况应该不需要这个功能。
+为原始数据的发送，增加一个延迟抖动值。这样上层应用计算出来的RTT方差会更大，以等待后续冗余包的到达，不至于发生在冗余包到达之前就触发重传的尴尬。正常情况下跨国网络本身的延迟抖动就很大，可以不用设-j。
 
 -j选项不但可以模拟延迟抖动，也可以模拟延迟。
 
@@ -198,8 +201,12 @@ echo mtu 1100 > fifo.file
 echo timeout 5 > fifo.file
 echo queue-len 100 > fifo.file
 echo mode 0 > fifo.file
+echo interval 5 > fifo.file
+echo interval 3:8 > fifo.file
+echo jitter 5 > fifo.file
+echo jitter 3:8 > fifo.file
 ```
-可以动态改变fec编码器参数。可以从程序的log里看到command是否发送成功。
+可以动态改变运行参数。可以从程序的log里看到command是否发送成功。
 
 ### 以下设置两端必须相同。 
 
